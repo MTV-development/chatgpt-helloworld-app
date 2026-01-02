@@ -1,0 +1,29 @@
+{
+  "name": "chatgpt-helloworld-app",
+  "version": "1.0.0",
+  "description": "A simple Hello World ChatGPT App using the Apps SDK and MCP",
+  "type": "module",
+  "scripts": {
+    "build": "npm run build:server && npm run build:widget",
+    "build:server": "tsc",
+    "build:widget": "esbuild src/widget/index.tsx --bundle --outfile=dist/widget/app.js --format=esm --target=es2020 --loader:.tsx=tsx --loader:.ts=ts",
+    "serve:widget": "npx serve dist/widget -p 4444 --cors",
+    "start": "node dist/server/index.js",
+    "dev": "concurrently \"npm run serve:widget\" \"npm run start\"",
+    "test": "node test-simple.js",
+    "tunnel": "ngrok http 8000"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.20.2",
+    "express": "^4.18.2",
+    "zod": "^3.25.76"
+  },
+  "devDependencies": {
+    "@types/express": "^4.17.21",
+    "@types/node": "^20.10.0",
+    "concurrently": "^8.2.2",
+    "esbuild": "^0.20.0",
+    "serve": "^14.2.1",
+    "typescript": "^5.3.0"
+  }
+}

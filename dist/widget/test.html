@@ -1,0 +1,285 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Widget Test Page - ChatGPT Hello World</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: #f0f0f0;
+      min-height: 100vh;
+      padding: 20px;
+    }
+    .test-container {
+      max-width: 800px;
+      margin: 0 auto;
+    }
+    h1 {
+      margin-bottom: 20px;
+      color: #333;
+    }
+    .controls {
+      background: white;
+      padding: 16px;
+      border-radius: 8px;
+      margin-bottom: 20px;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+    .controls h2 {
+      font-size: 14px;
+      margin-bottom: 12px;
+      color: #666;
+    }
+    .button-group {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-bottom: 12px;
+    }
+    button {
+      padding: 8px 16px;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 14px;
+      transition: all 0.2s;
+    }
+    button.primary {
+      background: #10a37f;
+      color: white;
+    }
+    button.primary:hover {
+      background: #0d8a6a;
+    }
+    button.secondary {
+      background: #e5e5e5;
+      color: #333;
+    }
+    button.secondary:hover {
+      background: #d0d0d0;
+    }
+    .theme-toggle {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .widget-frame {
+      background: white;
+      border-radius: 12px;
+      overflow: hidden;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+    }
+    .frame-header {
+      background: #f7f7f8;
+      padding: 12px 16px;
+      border-bottom: 1px solid #e5e5e5;
+      font-size: 12px;
+      color: #666;
+    }
+    iframe {
+      width: 100%;
+      height: 400px;
+      border: none;
+    }
+    .log {
+      background: #1a1a1a;
+      color: #10a37f;
+      padding: 16px;
+      border-radius: 8px;
+      margin-top: 20px;
+      font-family: monospace;
+      font-size: 12px;
+      max-height: 200px;
+      overflow-y: auto;
+    }
+    .log-entry {
+      margin-bottom: 4px;
+    }
+    .log-entry.error { color: #ff6b6b; }
+    .log-entry.info { color: #4dabf7; }
+  </style>
+</head>
+<body>
+  <div class="test-container">
+    <h1>Widget Test Page</h1>
+    <p style="margin-bottom: 20px; color: #666;">
+      This page simulates the ChatGPT environment to test your widget locally.
+      Click the buttons below to simulate tool responses.
+    </p>
+
+    <div class="controls">
+      <h2>Simulate Tool Responses</h2>
+      <div class="button-group">
+        <button class="primary" onclick="simulateGreeting()">Say Hello</button>
+        <button class="primary" onclick="simulateFact()">Random Fact</button>
+        <button class="primary" onclick="simulateCalculation()">Calculate (42 × 17)</button>
+        <button class="primary" onclick="simulateTime()">Current Time</button>
+      </div>
+      <div class="theme-toggle">
+        <span>Theme:</span>
+        <button class="secondary" onclick="setTheme('light')">Light</button>
+        <button class="secondary" onclick="setTheme('dark')">Dark</button>
+      </div>
+    </div>
+
+    <div class="widget-frame">
+      <div class="frame-header">
+        ChatGPT Widget Preview (iframe)
+      </div>
+      <iframe id="widget" src="app.html"></iframe>
+    </div>
+
+    <div class="log" id="log">
+      <div class="log-entry info">[INFO] Test page loaded. Click buttons to simulate responses.</div>
+    </div>
+  </div>
+
+  <script>
+    let currentTheme = 'light';
+
+    function log(message, type = '') {
+      const logEl = document.getElementById('log');
+      const entry = document.createElement('div');
+      entry.className = 'log-entry ' + type;
+      entry.textContent = `[${new Date().toLocaleTimeString()}] ${message}`;
+      logEl.appendChild(entry);
+      logEl.scrollTop = logEl.scrollHeight;
+    }
+
+    function updateWidget(toolOutput) {
+      const iframe = document.getElementById('widget');
+      const iframeWindow = iframe.contentWindow;
+
+      // Simulate window.openai
+      iframeWindow.openai = {
+        theme: currentTheme,
+        toolOutput: toolOutput,
+        callTool: (name, args) => {
+          log(`callTool invoked: ${name}(${JSON.stringify(args)})`, 'info');
+          return Promise.resolve({ success: true });
+        },
+        sendFollowUp: (message) => {
+          log(`sendFollowUp: "${message}"`, 'info');
+        },
+        setWidgetState: (state) => {
+          log(`setWidgetState: ${JSON.stringify(state)}`, 'info');
+        },
+        getWidgetState: () => ({}),
+      };
+
+      log(`Updated widget with: ${toolOutput.structuredContent?.type || 'unknown'} response`);
+
+      // Trigger re-render by reloading
+      iframe.src = iframe.src;
+    }
+
+    function simulateGreeting() {
+      updateWidget({
+        content: [{ type: 'text', text: 'Hello, Test User!' }],
+        structuredContent: {
+          type: 'greeting',
+          name: 'Test User',
+          timestamp: new Date().toISOString(),
+          message: 'Hello, Test User!'
+        }
+      });
+    }
+
+    function simulateFact() {
+      const facts = [
+        "Honey never spoils. Archaeologists have found 3000-year-old honey in Egyptian tombs that was still edible!",
+        "Octopuses have three hearts and blue blood.",
+        "A group of flamingos is called a 'flamboyance'.",
+        "Bananas are berries, but strawberries aren't."
+      ];
+      const fact = facts[Math.floor(Math.random() * facts.length)];
+
+      updateWidget({
+        content: [{ type: 'text', text: fact }],
+        structuredContent: {
+          type: 'fact',
+          fact: fact,
+          timestamp: new Date().toISOString()
+        }
+      });
+    }
+
+    function simulateCalculation() {
+      updateWidget({
+        content: [{ type: 'text', text: '42 × 17 = 714' }],
+        structuredContent: {
+          type: 'calculation',
+          operation: 'multiply',
+          a: 42,
+          b: 17,
+          result: 714,
+          expression: '42 × 17 = 714'
+        }
+      });
+    }
+
+    function simulateTime() {
+      const timeString = new Date().toLocaleString('en-US', {
+        weekday: 'long',
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit',
+        second: '2-digit',
+        timeZoneName: 'short'
+      });
+
+      updateWidget({
+        content: [{ type: 'text', text: `Current time: ${timeString}` }],
+        structuredContent: {
+          type: 'time',
+          timezone: 'local',
+          formatted: timeString,
+          iso: new Date().toISOString()
+        }
+      });
+    }
+
+    function setTheme(theme) {
+      currentTheme = theme;
+      log(`Theme changed to: ${theme}`, 'info');
+
+      // Update iframe
+      const iframe = document.getElementById('widget');
+      if (iframe.contentWindow.openai) {
+        iframe.contentWindow.openai.theme = theme;
+      }
+
+      // Reload to apply
+      iframe.src = iframe.src;
+    }
+
+    // Initialize
+    window.onload = () => {
+      const iframe = document.getElementById('widget');
+      iframe.onload = () => {
+        // Set up initial openai object
+        iframe.contentWindow.openai = {
+          theme: currentTheme,
+          toolOutput: null,
+          callTool: (name, args) => {
+            log(`callTool invoked: ${name}(${JSON.stringify(args)})`, 'info');
+            return Promise.resolve({ success: true });
+          },
+          sendFollowUp: (message) => {
+            log(`sendFollowUp: "${message}"`, 'info');
+          },
+          setWidgetState: (state) => {
+            log(`setWidgetState: ${JSON.stringify(state)}`, 'info');
+          },
+          getWidgetState: () => ({}),
+        };
+        log('Widget iframe loaded and initialized', 'info');
+      };
+    };
+  </script>
+</body>
+</html>
