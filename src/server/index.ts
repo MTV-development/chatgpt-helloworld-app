@@ -10,7 +10,9 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 // Configuration
 const PORT = process.env.PORT || 8000;
-const WIDGET_BASE_URL = process.env.WIDGET_BASE_URL || "http://localhost:4444";
+// WIDGET_BASE_URL: If not set, widgets are served from same origin (recommended for single ngrok tunnel)
+// Set this to a separate URL only if you want to serve widgets from a different server
+const WIDGET_BASE_URL = process.env.WIDGET_BASE_URL || "";
 
 // Create Express app
 const app = express();
@@ -27,8 +29,12 @@ app.use((req, res, next) => {
   next();
 });
 
-// Store active sessions
-const sessions = new Map<string, McpServer>();
+// Serve static widget files from /widget path
+const widgetPath = path.join(__dirname, "..", "widget");
+app.use("/widget", express.static(widgetPath));
+
+// Store active transports by session ID
+const transports = new Map<string, SSEServerTransport>();
 
 // Create MCP server factory
 function createMcpServer(): McpServer {
@@ -80,7 +86,7 @@ function createMcpServer(): McpServer {
           message: `Hello, ${greeting}!`,
         },
         _meta: {
-          "openai/outputTemplate": `${WIDGET_BASE_URL}/app.html`,
+          "openai/outputTemplate": `${WIDGET_BASE_URL}/widget/app.html`,
         },
       };
     }
@@ -119,7 +125,7 @@ function createMcpServer(): McpServer {
           timestamp,
         },
         _meta: {
-          "openai/outputTemplate": `${WIDGET_BASE_URL}/app.html`,
+          "openai/outputTemplate": `${WIDGET_BASE_URL}/widget/app.html`,
         },
       };
     }
@@ -179,7 +185,7 @@ function createMcpServer(): McpServer {
           expression: `${a} ${symbol} ${b} = ${result}`,
         },
         _meta: {
-          "openai/outputTemplate": `${WIDGET_BASE_URL}/app.html`,
+          "openai/outputTemplate": `${WIDGET_BASE_URL}/widget/app.html`,
         },
       };
     }
@@ -236,7 +242,7 @@ function createMcpServer(): McpServer {
           iso: new Date().toISOString(),
         },
         _meta: {
-          "openai/outputTemplate": `${WIDGET_BASE_URL}/app.html`,
+          "openai/outputTemplate": `${WIDGET_BASE_URL}/widget/app.html`,
         },
       };
     }
@@ -254,7 +260,7 @@ function getWidgetHtml(): string {
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Hello World Widget</title>
-  <script type="module" src="${WIDGET_BASE_URL}/app.js"></script>
+  <script type="module" src="${WIDGET_BASE_URL}/widget/app.js"></script>
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; }
     body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; }
@@ -266,34 +272,48 @@ function getWidgetHtml(): string {
 </html>`;
 }
 
-// SSE endpoint for MCP
+// SSE endpoint for MCP - establishes the SSE connection
 app.get("/mcp", async (req, res) => {
   console.log("New SSE connection established");
 
   const transport = new SSEServerTransport("/mcp/message", res);
   const server = createMcpServer();
 
-  // Store session
-  const sessionId = crypto.randomUUID();
-  sessions.set(sessionId, server);
+  // Store transport by session ID (extracted from the endpoint URL the transport sends)
+  // The SSEServerTransport sends an endpoint event with sessionId as query param
+  const sessionId = transport.sessionId;
+  transports.set(sessionId, transport);
+  console.log("Session ID:", sessionId);
 
   // Connect server to transport
   await server.connect(transport);
 
   // Cleanup on close
   req.on("close", () => {
-    console.log("SSE connection closed");
-    sessions.delete(sessionId);
+    console.log("SSE connection closed, session:", sessionId);
+    transports.delete(sessionId);
   });
 });
 
-// Message endpoint for MCP
+// Message endpoint for MCP - receives JSON-RPC messages from client
 app.post("/mcp/message", async (req, res) => {
-  console.log("Received MCP message:", JSON.stringify(req.body, null, 2));
+  const sessionId = req.query.sessionId as string;
+  console.log("Received MCP message for session:", sessionId);
 
-  // In a real implementation, you'd route this to the correct session
-  // For simplicity, we'll create a new response
-  res.json({ status: "received" });
+  const transport = transports.get(sessionId);
+  if (!transport) {
+    console.error("No transport found for session:", sessionId);
+    res.status(404).json({ error: "Session not found" });
+    return;
+  }
+
+  try {
+    // Use the transport's handlePostMessage method to process the message
+    await transport.handlePostMessage(req, res, req.body);
+  } catch (error) {
+    console.error("Error handling MCP message:", error);
+    res.status(500).json({ error: "Internal server error" });
+  }
 });
 
 // Health check endpoint
@@ -326,13 +346,14 @@ app.get("/", (req, res) => {
 
 // Start server
 app.listen(PORT, () => {
+  const widgetUrl = WIDGET_BASE_URL || `http://localhost:${PORT}`;
   console.log(`
 ╔═══════════════════════════════════════════════════════════════╗
 ║           HelloWorld ChatGPT App - MCP Server                 ║
 ╠═══════════════════════════════════════════════════════════════╣
 ║  Server running at: http://localhost:${PORT}                     ║
 ║  MCP endpoint:      http://localhost:${PORT}/mcp                 ║
-║  Widget URL:        ${WIDGET_BASE_URL.padEnd(35)}      ║
+║  Widget served at:  http://localhost:${PORT}/widget              ║
 ╠═══════════════════════════════════════════════════════════════╣
 ║  Available Tools:                                             ║
 ║    • say_hello      - Get a personalized greeting             ║
@@ -340,10 +361,10 @@ app.listen(PORT, () => {
 ║    • calculate      - Perform simple calculations             ║
 ║    • get_time       - Get the current time                    ║
 ╠═══════════════════════════════════════════════════════════════╣
-║  Next Steps:                                                  ║
-║    1. Run: npm run serve:widget (in another terminal)         ║
-║    2. Run: ngrok http ${PORT} (to expose publicly)               ║
-║    3. Add the ngrok URL as a connector in ChatGPT             ║
+║  Next Steps (only ONE ngrok tunnel needed!):                  ║
+║    1. Run: ngrok http ${PORT}                                    ║
+║    2. Add the ngrok URL + /mcp as a connector in ChatGPT      ║
+║       Example: https://abc123.ngrok-free.app/mcp              ║
 ╚═══════════════════════════════════════════════════════════════╝
   `);
 });

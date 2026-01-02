@@ -138,6 +138,7 @@
 
   <script>
     let currentTheme = 'light';
+    let currentToolOutput = null;
 
     function log(message, type = '') {
       const logEl = document.getElementById('log');
@@ -148,14 +149,10 @@
       logEl.scrollTop = logEl.scrollHeight;
     }
 
-    function updateWidget(toolOutput) {
-      const iframe = document.getElementById('widget');
-      const iframeWindow = iframe.contentWindow;
-
-      // Simulate window.openai
+    function setupOpenAI(iframeWindow) {
       iframeWindow.openai = {
         theme: currentTheme,
-        toolOutput: toolOutput,
+        toolOutput: currentToolOutput,
         callTool: (name, args) => {
           log(`callTool invoked: ${name}(${JSON.stringify(args)})`, 'info');
           return Promise.resolve({ success: true });
@@ -168,11 +165,22 @@
         },
         getWidgetState: () => ({}),
       };
+    }
 
-      log(`Updated widget with: ${toolOutput.structuredContent?.type || 'unknown'} response`);
+    function updateWidget(toolOutput) {
+      currentToolOutput = toolOutput;
+      log(`Simulating: ${toolOutput.structuredContent?.type || 'unknown'} response`);
 
-      // Trigger re-render by reloading
-      iframe.src = iframe.src;
+      const iframe = document.getElementById('widget');
+
+      // Set up handler for when iframe reloads
+      iframe.onload = () => {
+        setupOpenAI(iframe.contentWindow);
+        log('Widget updated with new data', 'info');
+      };
+
+      // Reload iframe to trigger fresh render with new data
+      iframe.src = 'app.html?' + Date.now();
     }
 
     function simulateGreeting() {
@@ -247,36 +255,23 @@
       currentTheme = theme;
       log(`Theme changed to: ${theme}`, 'info');
 
-      // Update iframe
       const iframe = document.getElementById('widget');
-      if (iframe.contentWindow.openai) {
-        iframe.contentWindow.openai.theme = theme;
-      }
 
-      // Reload to apply
-      iframe.src = iframe.src;
+      // Set up handler for when iframe reloads
+      iframe.onload = () => {
+        setupOpenAI(iframe.contentWindow);
+        log('Theme applied', 'info');
+      };
+
+      // Reload to apply theme
+      iframe.src = 'app.html?' + Date.now();
     }
 
     // Initialize
     window.onload = () => {
       const iframe = document.getElementById('widget');
       iframe.onload = () => {
-        // Set up initial openai object
-        iframe.contentWindow.openai = {
-          theme: currentTheme,
-          toolOutput: null,
-          callTool: (name, args) => {
-            log(`callTool invoked: ${name}(${JSON.stringify(args)})`, 'info');
-            return Promise.resolve({ success: true });
-          },
-          sendFollowUp: (message) => {
-            log(`sendFollowUp: "${message}"`, 'info');
-          },
-          setWidgetState: (state) => {
-            log(`setWidgetState: ${JSON.stringify(state)}`, 'info');
-          },
-          getWidgetState: () => ({}),
-        };
+        setupOpenAI(iframe.contentWindow);
         log('Widget iframe loaded and initialized', 'info');
       };
     };

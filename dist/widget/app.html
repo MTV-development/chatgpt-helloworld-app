@@ -405,17 +405,20 @@
 
     // Initialize
     function init() {
-      render();
+      // Wait a brief moment for parent to inject window.openai (for test page)
+      setTimeout(() => {
+        render();
 
-      // Re-render when openai data changes
-      let lastOutput = JSON.stringify(window.openai?.toolOutput);
-      setInterval(() => {
-        const currentOutput = JSON.stringify(window.openai?.toolOutput);
-        if (currentOutput !== lastOutput) {
-          lastOutput = currentOutput;
-          render();
-        }
-      }, 100);
+        // Re-render when openai data changes
+        let lastOutput = JSON.stringify(window.openai?.toolOutput);
+        setInterval(() => {
+          const currentOutput = JSON.stringify(window.openai?.toolOutput);
+          if (currentOutput !== lastOutput) {
+            lastOutput = currentOutput;
+            render();
+          }
+        }, 100);
+      }, 50);
     }
 
     // Start
