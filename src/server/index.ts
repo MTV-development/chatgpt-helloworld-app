@@ -13,7 +13,7 @@ const PORT = process.env.PORT || 8000;
 const DEBUG = process.env.DEBUG !== "false"; // Enable debug logging by default
 
 // Version identifier - update this when making changes to verify fresh deployment
-const BUILD_VERSION = "2026.01.03-B";
+const BUILD_VERSION = "2026.01.03-C";
 const BUILD_TIMESTAMP = new Date().toISOString();
 
 // Widget resource URI - this is the MCP resource identifier

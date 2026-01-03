@@ -656,7 +656,10 @@
   <div id="root"></div>
   <script>
     // Version identifier - must match server BUILD_VERSION
-    const WIDGET_VERSION = "2026.01.03-B";
+    const WIDGET_VERSION = "2026.01.03-C";
+
+    // Track if we've received data yet
+    let hasReceivedData = false;
 
     // Debug logging
     const DEBUG = true;
@@ -775,6 +778,15 @@
         <div class="button-row">
           <button class="widget-button primary" onclick="getTime()">Refresh Time</button>
           <button class="widget-button secondary" onclick="getRandomFact()">Get a Fact</button>
+        </div>
+      `;
+    }
+
+    function renderLoading() {
+      return `
+        <div class="no-data">
+          <div class="no-data-icon">⏳</div>
+          <div class="no-data-text">Loading...</div>
         </div>
       `;
     }
@@ -1325,7 +1337,8 @@
       const isDashboard = ['dashboard', 'region_detail', 'top_products'].includes(contentType);
 
       let contentHtml = '';
-      if (structuredContent) {
+      if (structuredContent && structuredContent.type) {
+        hasReceivedData = true;
         switch (contentType) {
           case 'greeting':
             contentHtml = renderGreeting(structuredContent);
@@ -1350,12 +1363,13 @@
             break;
           case 'pomodoro':
             contentHtml = renderPomodoro(structuredContent);
-            // Note: Timer works inline by default. PiP mode can be requested
-            // but is not required - inline mode persists in the conversation.
             break;
           default:
             contentHtml = renderNoData();
         }
+      } else if (!hasReceivedData) {
+        // Show loading state while waiting for initial data
+        contentHtml = renderLoading();
       } else {
         contentHtml = renderNoData();
       }
