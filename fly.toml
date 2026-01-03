@@ -6,6 +6,10 @@
 app = 'chatgpt-helloworld-mcp'
 primary_region = 'arn'
 
+# Disable high-availability (run only 1 machine)
+[deploy]
+  strategy = "immediate"
+
 [build]
 
 [http_service]
