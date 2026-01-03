@@ -1,0 +1,35 @@
+# fly.toml app configuration file generated for chatgpt-helloworld-mcp on 2026-01-03T09:55:29+01:00
+#
+# See https://fly.io/docs/reference/configuration/ for information about how to use this file.
+#
+
+app = 'chatgpt-helloworld-mcp'
+primary_region = 'arn'
+
+[build]
+
+[http_service]
+  internal_port = 8000
+  force_https = true
+  auto_stop_machines = 'off'      # Keep running for SSE/MCP
+  auto_start_machines = true
+  min_machines_running = 1         # Always have one instance
+  processes = ['app']
+
+  [http_service.concurrency]
+    type = "connections"
+    hard_limit = 100
+    soft_limit = 80
+
+# Health check
+[[http_service.checks]]
+  interval = "15s"
+  timeout = "5s"
+  grace_period = "10s"
+  method = "GET"
+  path = "/health"
+
+[[vm]]
+  cpu_kind = 'shared'
+  cpus = 1
+  memory_mb = 256                  # 256MB is enough for this app
