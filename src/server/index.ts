@@ -248,6 +248,197 @@ function createMcpServer(): McpServer {
     }
   );
 
+  // ============================================================
+  // SALES DASHBOARD TOOLS - Interactive data visualization demo
+  // ============================================================
+
+  // Sample sales data (simulating a real database)
+  const salesData = {
+    regions: [
+      { id: "na", name: "North America", color: "#10a37f" },
+      { id: "eu", name: "Europe", color: "#3b82f6" },
+      { id: "apac", name: "Asia Pacific", color: "#f59e0b" },
+      { id: "latam", name: "Latin America", color: "#ef4444" },
+    ],
+    quarterly: [
+      { quarter: "Q1", na: 1250000, eu: 890000, apac: 720000, latam: 340000 },
+      { quarter: "Q2", na: 1380000, eu: 920000, apac: 810000, latam: 380000 },
+      { quarter: "Q3", na: 1420000, eu: 850000, apac: 890000, latam: 420000 },
+      { quarter: "Q4", na: 1560000, eu: 980000, apac: 950000, latam: 460000 },
+    ],
+    products: [
+      { id: 1, name: "Widget Pro", category: "Premium", sales: 2450000, units: 12000, growth: 15.2 },
+      { id: 2, name: "Widget Basic", category: "Standard", sales: 1820000, units: 28000, growth: 8.5 },
+      { id: 3, name: "Widget Enterprise", category: "Premium", sales: 1650000, units: 3200, growth: 22.1 },
+      { id: 4, name: "Widget Lite", category: "Budget", sales: 980000, units: 45000, growth: -2.3 },
+      { id: 5, name: "Widget Cloud", category: "SaaS", sales: 890000, units: 8500, growth: 45.8 },
+    ],
+    monthlyByRegion: {
+      na: [
+        { month: "Jan", sales: 380000 }, { month: "Feb", sales: 420000 }, { month: "Mar", sales: 450000 },
+        { month: "Apr", sales: 440000 }, { month: "May", sales: 460000 }, { month: "Jun", sales: 480000 },
+        { month: "Jul", sales: 470000 }, { month: "Aug", sales: 490000 }, { month: "Sep", sales: 460000 },
+        { month: "Oct", sales: 510000 }, { month: "Nov", sales: 520000 }, { month: "Dec", sales: 530000 },
+      ],
+      eu: [
+        { month: "Jan", sales: 280000 }, { month: "Feb", sales: 290000 }, { month: "Mar", sales: 320000 },
+        { month: "Apr", sales: 300000 }, { month: "May", sales: 310000 }, { month: "Jun", sales: 310000 },
+        { month: "Jul", sales: 270000 }, { month: "Aug", sales: 260000 }, { month: "Sep", sales: 320000 },
+        { month: "Oct", sales: 330000 }, { month: "Nov", sales: 340000 }, { month: "Dec", sales: 310000 },
+      ],
+      apac: [
+        { month: "Jan", sales: 220000 }, { month: "Feb", sales: 240000 }, { month: "Mar", sales: 260000 },
+        { month: "Apr", sales: 270000 }, { month: "May", sales: 280000 }, { month: "Jun", sales: 260000 },
+        { month: "Jul", sales: 290000 }, { month: "Aug", sales: 300000 }, { month: "Sep", sales: 300000 },
+        { month: "Oct", sales: 310000 }, { month: "Nov", sales: 320000 }, { month: "Dec", sales: 320000 },
+      ],
+      latam: [
+        { month: "Jan", sales: 100000 }, { month: "Feb", sales: 110000 }, { month: "Mar", sales: 130000 },
+        { month: "Apr", sales: 120000 }, { month: "May", sales: 130000 }, { month: "Jun", sales: 130000 },
+        { month: "Jul", sales: 140000 }, { month: "Aug", sales: 140000 }, { month: "Sep", sales: 140000 },
+        { month: "Oct", sales: 150000 }, { month: "Nov", sales: 160000 }, { month: "Dec", sales: 150000 },
+      ],
+    },
+  };
+
+  // Tool 5: Get Sales Dashboard - Main dashboard view
+  server.tool(
+    "get_sales_dashboard",
+    "Display an interactive sales dashboard with charts showing sales by region. Use this when the user asks about sales, revenue, performance, or wants to see a dashboard.",
+    {
+      period: z.enum(["q1", "q2", "q3", "q4", "ytd"]).optional().describe("Time period to show. Defaults to YTD (year to date)."),
+    },
+    async ({ period }) => {
+      const selectedPeriod = period || "ytd";
+
+      // Calculate totals based on period
+      let regionTotals: { id: string; name: string; color: string; sales: number }[];
+
+      if (selectedPeriod === "ytd") {
+        regionTotals = salesData.regions.map(region => {
+          const total = salesData.quarterly.reduce((sum, q) => sum + (q[region.id as keyof typeof q] as number), 0);
+          return { ...region, sales: total };
+        });
+      } else {
+        const quarterIndex = parseInt(selectedPeriod.replace("q", "")) - 1;
+        const quarterData = salesData.quarterly[quarterIndex];
+        regionTotals = salesData.regions.map(region => ({
+          ...region,
+          sales: quarterData[region.id as keyof typeof quarterData] as number,
+        }));
+      }
+
+      const totalSales = regionTotals.reduce((sum, r) => sum + r.sales, 0);
+      const topRegion = regionTotals.reduce((max, r) => r.sales > max.sales ? r : max);
+
+      return {
+        content: [
+          {
+            type: "text",
+            text: `Sales Dashboard (${selectedPeriod.toUpperCase()}): Total revenue is $${(totalSales / 1000000).toFixed(1)}M. ${topRegion.name} leads with $${(topRegion.sales / 1000000).toFixed(1)}M.`,
+          },
+        ],
+        structuredContent: {
+          type: "dashboard",
+          period: selectedPeriod,
+          totalSales,
+          regions: regionTotals,
+          quarterly: salesData.quarterly,
+          timestamp: new Date().toISOString(),
+        },
+        _meta: {
+          "openai/outputTemplate": `${WIDGET_BASE_URL}/widget/app.html`,
+        },
+      };
+    }
+  );
+
+  // Tool 6: Get Sales By Region - Drill down into a specific region
+  server.tool(
+    "get_sales_by_region",
+    "Get detailed sales breakdown for a specific region. Use this when the user asks about a specific region's performance (e.g., 'How is Europe doing?', 'Show me Asia sales').",
+    {
+      region: z.enum(["na", "eu", "apac", "latam"]).describe("Region ID: na (North America), eu (Europe), apac (Asia Pacific), latam (Latin America)"),
+    },
+    async ({ region }) => {
+      const regionInfo = salesData.regions.find(r => r.id === region)!;
+      const monthlyData = salesData.monthlyByRegion[region as keyof typeof salesData.monthlyByRegion];
+      const totalSales = monthlyData.reduce((sum, m) => sum + m.sales, 0);
+      const avgMonthlySales = totalSales / 12;
+      const bestMonth = monthlyData.reduce((max, m) => m.sales > max.sales ? m : max);
+      const worstMonth = monthlyData.reduce((min, m) => m.sales < min.sales ? m : min);
+
+      // Calculate quarter-over-quarter growth
+      const q4Sales = salesData.quarterly[3][region as keyof typeof salesData.quarterly[0]] as number;
+      const q3Sales = salesData.quarterly[2][region as keyof typeof salesData.quarterly[0]] as number;
+      const qoqGrowth = ((q4Sales - q3Sales) / q3Sales * 100).toFixed(1);
+
+      return {
+        content: [
+          {
+            type: "text",
+            text: `${regionInfo.name} Sales: Total YTD revenue is $${(totalSales / 1000000).toFixed(2)}M. Best month was ${bestMonth.month} ($${(bestMonth.sales / 1000).toFixed(0)}K). Q4 vs Q3 growth: ${qoqGrowth}%.`,
+          },
+        ],
+        structuredContent: {
+          type: "region_detail",
+          region: regionInfo,
+          monthlyData,
+          totalSales,
+          avgMonthlySales,
+          bestMonth,
+          worstMonth,
+          qoqGrowth: parseFloat(qoqGrowth),
+          timestamp: new Date().toISOString(),
+        },
+        _meta: {
+          "openai/outputTemplate": `${WIDGET_BASE_URL}/widget/app.html`,
+        },
+      };
+    }
+  );
+
+  // Tool 7: Get Top Products - Show best selling products
+  server.tool(
+    "get_top_products",
+    "Show top selling products with sales figures and growth rates. Use this when the user asks about products, best sellers, or product performance.",
+    {
+      limit: z.number().min(1).max(10).optional().describe("Number of products to show (1-10). Defaults to 5."),
+      sortBy: z.enum(["sales", "units", "growth"]).optional().describe("Sort by: sales (revenue), units (quantity sold), or growth (percentage). Defaults to sales."),
+    },
+    async ({ limit, sortBy }) => {
+      const count = limit || 5;
+      const sort = sortBy || "sales";
+
+      const sortedProducts = [...salesData.products].sort((a, b) => {
+        if (sort === "growth") return b.growth - a.growth;
+        return b[sort] - a[sort];
+      }).slice(0, count);
+
+      const totalRevenue = sortedProducts.reduce((sum, p) => sum + p.sales, 0);
+      const topProduct = sortedProducts[0];
+
+      return {
+        content: [
+          {
+            type: "text",
+            text: `Top ${count} Products (by ${sort}): ${topProduct.name} leads with $${(topProduct.sales / 1000000).toFixed(2)}M in sales (${topProduct.growth > 0 ? '+' : ''}${topProduct.growth}% growth).`,
+          },
+        ],
+        structuredContent: {
+          type: "top_products",
+          products: sortedProducts,
+          sortBy: sort,
+          totalRevenue,
+          timestamp: new Date().toISOString(),
+        },
+        _meta: {
+          "openai/outputTemplate": `${WIDGET_BASE_URL}/widget/app.html`,
+        },
+      };
+    }
+  );
+
   return server;
 }
 
@@ -330,7 +521,7 @@ app.get("/health", (req, res) => {
 app.get("/", (req, res) => {
   res.json({
     name: "HelloWorld ChatGPT App",
-    description: "A simple test app for the ChatGPT Apps SDK",
+    description: "A simple test app for the ChatGPT Apps SDK with interactive sales dashboard",
     endpoints: {
       mcp: "/mcp",
       health: "/health",
@@ -340,6 +531,9 @@ app.get("/", (req, res) => {
       { name: "get_random_fact", description: "Get a random fun fact" },
       { name: "calculate", description: "Perform simple calculations" },
       { name: "get_time", description: "Get the current time" },
+      { name: "get_sales_dashboard", description: "Interactive sales dashboard with charts" },
+      { name: "get_sales_by_region", description: "Detailed regional sales breakdown" },
+      { name: "get_top_products", description: "Top selling products" },
     ],
   });
 });
@@ -356,10 +550,14 @@ app.listen(PORT, () => {
 ║  Widget served at:  http://localhost:${PORT}/widget              ║
 ╠═══════════════════════════════════════════════════════════════╣
 ║  Available Tools:                                             ║
-║    • say_hello      - Get a personalized greeting             ║
-║    • get_random_fact - Get a random fun fact                  ║
-║    • calculate      - Perform simple calculations             ║
-║    • get_time       - Get the current time                    ║
+║    • say_hello        - Get a personalized greeting           ║
+║    • get_random_fact  - Get a random fun fact                 ║
+║    • calculate        - Perform simple calculations           ║
+║    • get_time         - Get the current time                  ║
+║  Dashboard Tools:                                             ║
+║    • get_sales_dashboard - Interactive sales charts           ║
+║    • get_sales_by_region - Regional drill-down                ║
+║    • get_top_products    - Product performance                ║
 ╠═══════════════════════════════════════════════════════════════╣
 ║  Next Steps (only ONE ngrok tunnel needed!):                  ║
 ║    1. Run: ngrok http ${PORT}                                    ║

@@ -14,6 +14,9 @@ interface OpenAIWidgetAPI {
     setWidgetState: (state: Record<string, unknown>) => void;
     getWidgetState: () => Record<string, unknown>;
     sendFollowUp: (message: string) => void;
+    sendFollowUpMessage?: (opts: {
+        prompt: string;
+    }) => void;
     requestFullscreen: () => void;
     exitFullscreen: () => void;
 }

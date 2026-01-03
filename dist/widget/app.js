@@ -37,8 +37,12 @@ var styles = `
   }
 
   .widget-container {
-    max-width: 400px;
+    max-width: 500px;
     margin: 0 auto;
+  }
+
+  .widget-container.dashboard {
+    max-width: 600px;
   }
 
   .widget-card {
@@ -218,11 +222,342 @@ var styles = `
     color: var(--text-secondary);
     text-align: center;
   }
+
+  /* Dashboard styles */
+  .dashboard-stats {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 12px;
+    margin-bottom: 16px;
+  }
+
+  .stat-card {
+    background: var(--bg-primary);
+    padding: 12px;
+    border-radius: 8px;
+    border: 1px solid var(--border);
+  }
+
+  .stat-value {
+    font-size: 20px;
+    font-weight: 700;
+    color: var(--accent);
+  }
+
+  .stat-label {
+    font-size: 11px;
+    color: var(--text-secondary);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+
+  .chart-container {
+    background: var(--bg-primary);
+    border-radius: 8px;
+    padding: 16px;
+    margin-bottom: 16px;
+    border: 1px solid var(--border);
+  }
+
+  .chart-title {
+    font-size: 12px;
+    font-weight: 600;
+    margin-bottom: 12px;
+    color: var(--text-secondary);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+
+  .bar-chart {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .bar-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    cursor: pointer;
+    padding: 4px;
+    border-radius: 4px;
+    transition: background 0.2s;
+  }
+
+  .bar-row:hover {
+    background: var(--bg-secondary);
+  }
+
+  .bar-label {
+    width: 100px;
+    font-size: 12px;
+    font-weight: 500;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .bar-track {
+    flex: 1;
+    height: 24px;
+    background: var(--bg-secondary);
+    border-radius: 4px;
+    overflow: hidden;
+    position: relative;
+  }
+
+  .bar-fill {
+    height: 100%;
+    border-radius: 4px;
+    transition: width 0.5s ease;
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    padding-right: 8px;
+  }
+
+  .bar-value {
+    font-size: 11px;
+    font-weight: 600;
+    color: white;
+    text-shadow: 0 1px 2px rgba(0,0,0,0.3);
+  }
+
+  .period-selector {
+    display: flex;
+    gap: 4px;
+    margin-bottom: 16px;
+    flex-wrap: wrap;
+  }
+
+  .period-btn {
+    padding: 6px 12px;
+    border: 1px solid var(--border);
+    background: var(--bg-primary);
+    color: var(--text-primary);
+    border-radius: 6px;
+    font-size: 12px;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+
+  .period-btn:hover {
+    background: var(--border);
+  }
+
+  .period-btn.active {
+    background: var(--accent);
+    color: white;
+    border-color: var(--accent);
+  }
+
+  .product-list {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .product-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px;
+    background: var(--bg-primary);
+    border-radius: 8px;
+    border: 1px solid var(--border);
+  }
+
+  .product-rank {
+    width: 24px;
+    height: 24px;
+    background: var(--accent);
+    color: white;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 12px;
+    font-weight: 700;
+  }
+
+  .product-info {
+    flex: 1;
+  }
+
+  .product-name {
+    font-weight: 600;
+    font-size: 14px;
+  }
+
+  .product-category {
+    font-size: 11px;
+    color: var(--text-secondary);
+  }
+
+  .product-stats {
+    text-align: right;
+  }
+
+  .product-sales {
+    font-weight: 600;
+    font-size: 14px;
+  }
+
+  .product-growth {
+    font-size: 11px;
+  }
+
+  .product-growth.positive {
+    color: #10a37f;
+  }
+
+  .product-growth.negative {
+    color: #ef4444;
+  }
+
+  .region-header {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 16px;
+  }
+
+  .region-color {
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+  }
+
+  .region-name {
+    font-size: 18px;
+    font-weight: 600;
+  }
+
+  .metrics-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 12px;
+    margin-bottom: 16px;
+  }
+
+  .metric-card {
+    background: var(--bg-primary);
+    padding: 12px;
+    border-radius: 8px;
+    border: 1px solid var(--border);
+  }
+
+  .metric-value {
+    font-size: 18px;
+    font-weight: 700;
+  }
+
+  .metric-value.positive {
+    color: #10a37f;
+  }
+
+  .metric-value.negative {
+    color: #ef4444;
+  }
+
+  .metric-label {
+    font-size: 11px;
+    color: var(--text-secondary);
+    text-transform: uppercase;
+  }
+
+  .mini-chart {
+    display: flex;
+    align-items: flex-end;
+    gap: 2px;
+    height: 60px;
+    padding: 8px 0;
+  }
+
+  .mini-bar {
+    flex: 1;
+    background: var(--accent);
+    border-radius: 2px 2px 0 0;
+    min-height: 4px;
+    opacity: 0.7;
+    transition: opacity 0.2s;
+  }
+
+  .mini-bar:hover {
+    opacity: 1;
+  }
+
+  .ask-ai-section {
+    margin-top: 12px;
+    padding-top: 12px;
+    border-top: 1px solid var(--border);
+  }
+
+  .ask-ai-btn {
+    width: 100%;
+    padding: 10px 16px;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    border: none;
+    border-radius: 8px;
+    font-size: 13px;
+    font-weight: 500;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    transition: transform 0.2s, box-shadow 0.2s;
+  }
+
+  .ask-ai-btn:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+  }
 `;
 function getContentType(data) {
   if (!data)
     return "unknown";
   return data.type || "unknown";
+}
+function escapeHtml(text) {
+  const div = document.createElement("div");
+  div.textContent = text;
+  return div.innerHTML;
+}
+function formatCurrency(value) {
+  if (value >= 1e6) {
+    return "$" + (value / 1e6).toFixed(1) + "M";
+  } else if (value >= 1e3) {
+    return "$" + (value / 1e3).toFixed(0) + "K";
+  }
+  return "$" + value;
+}
+function getIcon(type) {
+  const icons = {
+    greeting: "\u{1F44B}",
+    fact: "\u{1F4A1}",
+    calculation: "\u{1F522}",
+    time: "\u{1F550}",
+    dashboard: "\u{1F4CA}",
+    region_detail: "\u{1F5FA}\uFE0F",
+    top_products: "\u{1F3C6}",
+    unknown: "\u{1F680}"
+  };
+  return icons[type] || icons.unknown;
+}
+function getTitle(type) {
+  const titles = {
+    greeting: "Greeting",
+    fact: "Fun Fact",
+    calculation: "Calculator",
+    time: "Current Time",
+    dashboard: "Sales Dashboard",
+    region_detail: "Regional Sales",
+    top_products: "Top Products",
+    unknown: "Hello World"
+  };
+  return titles[type] || titles.unknown;
 }
 function renderGreeting(data) {
   const name = data.name || "World";
@@ -288,80 +623,175 @@ function renderNoData() {
     </div>
     <div class="button-row">
       <button class="widget-button primary" onclick="sayHello()">Say Hello</button>
-      <button class="widget-button secondary" onclick="getRandomFact()">Get a Fact</button>
+      <button class="widget-button secondary" onclick="getSalesDashboard()">Sales Dashboard</button>
     </div>
   `;
 }
-function escapeHtml(text) {
-  const div = document.createElement("div");
-  div.textContent = text;
-  return div.innerHTML;
-}
-function getIcon(type) {
-  const icons = {
-    greeting: "\u{1F44B}",
-    fact: "\u{1F4A1}",
-    calculation: "\u{1F522}",
-    time: "\u{1F550}",
-    unknown: "\u{1F680}"
-  };
-  return icons[type] || icons.unknown;
-}
-function getTitle(type) {
-  const titles = {
-    greeting: "Greeting",
-    fact: "Fun Fact",
-    calculation: "Calculator",
-    time: "Current Time",
-    unknown: "Hello World"
-  };
-  return titles[type] || titles.unknown;
-}
-function render() {
-  const root = document.getElementById("root");
-  if (!root)
-    return;
-  const openai = window.openai;
-  const theme = openai?.theme || "light";
-  const structuredContent = openai?.toolOutput?.structuredContent;
-  const contentType = getContentType(structuredContent);
-  document.documentElement.setAttribute("data-theme", theme);
-  let contentHtml = "";
-  if (structuredContent) {
-    switch (contentType) {
-      case "greeting":
-        contentHtml = renderGreeting(structuredContent);
-        break;
-      case "fact":
-        contentHtml = renderFact(structuredContent);
-        break;
-      case "calculation":
-        contentHtml = renderCalculation(structuredContent);
-        break;
-      case "time":
-        contentHtml = renderTime(structuredContent);
-        break;
-      default:
-        contentHtml = renderNoData();
-    }
-  } else {
-    contentHtml = renderNoData();
-  }
-  root.innerHTML = `
-    <div class="widget-container">
-      <div class="widget-card">
-        <div class="widget-header">
-          <div class="widget-icon">${getIcon(contentType)}</div>
-          <div>
-            <div class="widget-title">${getTitle(contentType)}</div>
-            <div class="widget-subtitle">ChatGPT Hello World App</div>
+function renderDashboard(data) {
+  const regions = data.regions || [];
+  const totalSales = data.totalSales || 0;
+  const period = data.period || "ytd";
+  const maxSales = Math.max(...regions.map((r) => r.sales));
+  const topRegion = regions.reduce((max, r) => r.sales > max.sales ? r : max, regions[0]);
+  const periodLabels = { q1: "Q1", q2: "Q2", q3: "Q3", q4: "Q4", ytd: "YTD" };
+  const barsHtml = regions.map((region) => {
+    const percentage = (region.sales / maxSales * 100).toFixed(0);
+    return `
+      <div class="bar-row" onclick="drillDownRegion('${region.id}')" title="Click to see ${region.name} details">
+        <div class="bar-label">${escapeHtml(region.name)}</div>
+        <div class="bar-track">
+          <div class="bar-fill" style="width: ${percentage}%; background: ${region.color};">
+            <span class="bar-value">${formatCurrency(region.sales)}</span>
           </div>
         </div>
-        ${contentHtml}
-        <div class="footer-info">
-          Powered by OpenAI Apps SDK
+      </div>
+    `;
+  }).join("");
+  const periodBtns = Object.entries(periodLabels).map(
+    ([key, label]) => `
+    <button class="period-btn ${period === key ? "active" : ""}" onclick="changePeriod('${key}')">${label}</button>
+  `
+  ).join("");
+  return `
+    <div class="dashboard-stats">
+      <div class="stat-card">
+        <div class="stat-value">${formatCurrency(totalSales)}</div>
+        <div class="stat-label">Total Revenue</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-value">${regions.length}</div>
+        <div class="stat-label">Regions</div>
+      </div>
+    </div>
+
+    <div class="period-selector">
+      ${periodBtns}
+    </div>
+
+    <div class="chart-container">
+      <div class="chart-title">Sales by Region (${periodLabels[period]})</div>
+      <div class="bar-chart">
+        ${barsHtml}
+      </div>
+    </div>
+
+    <div class="button-row">
+      <button class="widget-button primary" onclick="getTopProducts()">Top Products</button>
+      <button class="widget-button secondary" onclick="drillDownRegion('${topRegion?.id || "na"}')">Explore ${topRegion?.name || "Region"}</button>
+    </div>
+
+    <div class="ask-ai-section">
+      <button class="ask-ai-btn" onclick="askAI('What insights can you provide about these sales figures? Which regions should we focus on?')">
+        \u2728 Ask AI for Insights
+      </button>
+    </div>
+  `;
+}
+function renderRegionDetail(data) {
+  const region = data.region || {};
+  const monthlyData = data.monthlyData || [];
+  const totalSales = data.totalSales || 0;
+  const qoqGrowth = data.qoqGrowth || 0;
+  const bestMonth = data.bestMonth || {};
+  const worstMonth = data.worstMonth || {};
+  const maxMonthSales = Math.max(...monthlyData.map((m) => m.sales));
+  const miniBarsHtml = monthlyData.map((m) => {
+    const height = (m.sales / maxMonthSales * 100).toFixed(0);
+    return `<div class="mini-bar" style="height: ${height}%; background: ${region.color};" title="${m.month}: ${formatCurrency(m.sales)}"></div>`;
+  }).join("");
+  return `
+    <div class="region-header">
+      <div class="region-color" style="background: ${region.color};"></div>
+      <div class="region-name">${escapeHtml(region.name || "Unknown")}</div>
+    </div>
+
+    <div class="metrics-grid">
+      <div class="metric-card">
+        <div class="metric-value">${formatCurrency(totalSales)}</div>
+        <div class="metric-label">YTD Revenue</div>
+      </div>
+      <div class="metric-card">
+        <div class="metric-value ${qoqGrowth >= 0 ? "positive" : "negative"}">${qoqGrowth >= 0 ? "+" : ""}${qoqGrowth}%</div>
+        <div class="metric-label">Q4 vs Q3 Growth</div>
+      </div>
+      <div class="metric-card">
+        <div class="metric-value positive">${bestMonth.month || "N/A"}</div>
+        <div class="metric-label">Best Month (${formatCurrency(bestMonth.sales || 0)})</div>
+      </div>
+      <div class="metric-card">
+        <div class="metric-value negative">${worstMonth.month || "N/A"}</div>
+        <div class="metric-label">Lowest Month (${formatCurrency(worstMonth.sales || 0)})</div>
+      </div>
+    </div>
+
+    <div class="chart-container">
+      <div class="chart-title">Monthly Trend</div>
+      <div class="mini-chart">
+        ${miniBarsHtml}
+      </div>
+    </div>
+
+    <div class="button-row">
+      <button class="widget-button primary" onclick="getSalesDashboard()">Back to Dashboard</button>
+      <button class="widget-button secondary" onclick="getTopProducts()">Top Products</button>
+    </div>
+
+    <div class="ask-ai-section">
+      <button class="ask-ai-btn" onclick="askAI('Analyze the ${region.name} sales performance. What trends do you see and what recommendations do you have?')">
+        \u2728 Analyze ${region.name} Performance
+      </button>
+    </div>
+  `;
+}
+function renderTopProducts(data) {
+  const products = data.products || [];
+  const sortBy = data.sortBy || "sales";
+  const totalRevenue = data.totalRevenue || 0;
+  const productsHtml = products.map((product, index) => {
+    const growthClass = product.growth >= 0 ? "positive" : "negative";
+    const growthSign = product.growth >= 0 ? "+" : "";
+    return `
+      <div class="product-item">
+        <div class="product-rank">${index + 1}</div>
+        <div class="product-info">
+          <div class="product-name">${escapeHtml(product.name)}</div>
+          <div class="product-category">${escapeHtml(product.category)} \u2022 ${product.units.toLocaleString()} units</div>
+        </div>
+        <div class="product-stats">
+          <div class="product-sales">${formatCurrency(product.sales)}</div>
+          <div class="product-growth ${growthClass}">${growthSign}${product.growth}%</div>
         </div>
       </div>
+    `;
+  }).join("");
+  return `
+    <div class="dashboard-stats">
+      <div class="stat-card">
+        <div class="stat-value">${formatCurrency(totalRevenue)}</div>
+        <div class="stat-label">Combined Revenue</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-value">${products.length}</div>
+        <div class="stat-label">Products Shown</div>
+      </div>
+    </div>
+
+    <div class="content-section">
+      <div class="content-label">Ranked by ${sortBy}</div>
+      <div class="product-list">
+        ${productsHtml}
+      </div>
+    </div>
+
+    <div class="button-row">
+      <button class="widget-button primary" onclick="getSalesDashboard()">Back to Dashboard</button>
+      <button class="widget-button secondary" onclick="getTopProducts('growth')">Sort by Growth</button>
+    </div>
+
+    <div class="ask-ai-section">
+      <button class="ask-ai-btn" onclick="askAI('Which of these products should we invest more in? What does the growth rate tell us about market trends?')">
+        \u2728 Get Product Strategy
+      </button>
     </div>
   `;
 }
@@ -395,19 +825,115 @@ window.getTime = async () => {
     window.openai.sendFollowUp("What time is it?");
   }
 };
+window.getSalesDashboard = async (period) => {
+  if (window.openai?.callTool) {
+    await window.openai.callTool("get_sales_dashboard", period ? { period } : {});
+  } else if (window.openai?.sendFollowUp) {
+    window.openai.sendFollowUp("Show me the sales dashboard");
+  }
+};
+window.changePeriod = async (period) => {
+  if (window.openai?.setWidgetState) {
+    window.openai.setWidgetState({ selectedPeriod: period });
+  }
+  const getSalesDashboard = window.getSalesDashboard;
+  await getSalesDashboard(period);
+};
+window.drillDownRegion = async (regionId) => {
+  if (window.openai?.callTool) {
+    await window.openai.callTool("get_sales_by_region", { region: regionId });
+  } else if (window.openai?.sendFollowUp) {
+    const regionNames = { na: "North America", eu: "Europe", apac: "Asia Pacific", latam: "Latin America" };
+    window.openai.sendFollowUp(`Show me sales details for ${regionNames[regionId] || regionId}`);
+  }
+};
+window.getTopProducts = async (sortBy) => {
+  if (window.openai?.callTool) {
+    await window.openai.callTool("get_top_products", sortBy ? { sortBy } : {});
+  } else if (window.openai?.sendFollowUp) {
+    window.openai.sendFollowUp("Show me the top selling products");
+  }
+};
+window.askAI = async (question) => {
+  if (window.openai?.sendFollowUp) {
+    window.openai.sendFollowUp(question);
+  } else if (window.openai?.sendFollowUpMessage) {
+    window.openai.sendFollowUpMessage({ prompt: question });
+  }
+};
+function render() {
+  const root = document.getElementById("root");
+  if (!root)
+    return;
+  const openai = window.openai;
+  const theme = openai?.theme || "light";
+  const structuredContent = openai?.toolOutput?.structuredContent;
+  const contentType = getContentType(structuredContent);
+  document.documentElement.setAttribute("data-theme", theme);
+  const isDashboard = ["dashboard", "region_detail", "top_products"].includes(contentType);
+  let contentHtml = "";
+  if (structuredContent) {
+    switch (contentType) {
+      case "greeting":
+        contentHtml = renderGreeting(structuredContent);
+        break;
+      case "fact":
+        contentHtml = renderFact(structuredContent);
+        break;
+      case "calculation":
+        contentHtml = renderCalculation(structuredContent);
+        break;
+      case "time":
+        contentHtml = renderTime(structuredContent);
+        break;
+      case "dashboard":
+        contentHtml = renderDashboard(structuredContent);
+        break;
+      case "region_detail":
+        contentHtml = renderRegionDetail(structuredContent);
+        break;
+      case "top_products":
+        contentHtml = renderTopProducts(structuredContent);
+        break;
+      default:
+        contentHtml = renderNoData();
+    }
+  } else {
+    contentHtml = renderNoData();
+  }
+  root.innerHTML = `
+    <div class="widget-container ${isDashboard ? "dashboard" : ""}">
+      <div class="widget-card">
+        <div class="widget-header">
+          <div class="widget-icon">${getIcon(contentType)}</div>
+          <div>
+            <div class="widget-title">${getTitle(contentType)}</div>
+            <div class="widget-subtitle">ChatGPT Hello World App</div>
+          </div>
+        </div>
+        ${contentHtml}
+        <div class="footer-info">
+          Powered by OpenAI Apps SDK
+        </div>
+      </div>
+    </div>
+  `;
+}
 function init() {
   const styleSheet = document.createElement("style");
   styleSheet.textContent = styles;
   document.head.appendChild(styleSheet);
-  render();
-  let lastOutput = JSON.stringify(window.openai?.toolOutput);
-  setInterval(() => {
-    const currentOutput = JSON.stringify(window.openai?.toolOutput);
-    if (currentOutput !== lastOutput) {
-      lastOutput = currentOutput;
-      render();
-    }
-  }, 100);
+  setTimeout(() => {
+    render();
+    let lastOutput = JSON.stringify(window.openai?.toolOutput);
+    setInterval(() => {
+      const currentOutput = JSON.stringify(window.openai?.toolOutput);
+      if (currentOutput !== lastOutput) {
+        lastOutput = currentOutput;
+        render();
+      }
+    }, 100);
+  }, 50);
 }
 if (document.readyState === "loading") {
   document.addEventListener("DOMContentLoaded", init);

@@ -80,8 +80,22 @@
     }
     iframe {
       width: 100%;
-      height: 400px;
+      height: 550px;
       border: none;
+    }
+    .button-group-label {
+      font-size: 11px;
+      color: #999;
+      margin-bottom: 4px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+    button.dashboard {
+      background: #667eea;
+      color: white;
+    }
+    button.dashboard:hover {
+      background: #5a67d8;
     }
     .log {
       background: #1a1a1a;
@@ -111,11 +125,18 @@
 
     <div class="controls">
       <h2>Simulate Tool Responses</h2>
+      <div class="button-group-label">Basic Tools</div>
       <div class="button-group">
         <button class="primary" onclick="simulateGreeting()">Say Hello</button>
         <button class="primary" onclick="simulateFact()">Random Fact</button>
         <button class="primary" onclick="simulateCalculation()">Calculate (42 × 17)</button>
         <button class="primary" onclick="simulateTime()">Current Time</button>
+      </div>
+      <div class="button-group-label">Dashboard Tools</div>
+      <div class="button-group">
+        <button class="dashboard" onclick="simulateDashboard()">Sales Dashboard</button>
+        <button class="dashboard" onclick="simulateRegionDetail()">Region Detail (NA)</button>
+        <button class="dashboard" onclick="simulateTopProducts()">Top Products</button>
       </div>
       <div class="theme-toggle">
         <span>Theme:</span>
@@ -247,6 +268,72 @@
           timezone: 'local',
           formatted: timeString,
           iso: new Date().toISOString()
+        }
+      });
+    }
+
+    // Dashboard simulations
+    function simulateDashboard() {
+      updateWidget({
+        content: [{ type: 'text', text: 'Sales Dashboard (YTD): Total revenue is $13.2M. North America leads with $5.6M.' }],
+        structuredContent: {
+          type: 'dashboard',
+          period: 'ytd',
+          totalSales: 13210000,
+          regions: [
+            { id: 'na', name: 'North America', color: '#10a37f', sales: 5610000 },
+            { id: 'eu', name: 'Europe', color: '#3b82f6', sales: 3640000 },
+            { id: 'apac', name: 'Asia Pacific', color: '#f59e0b', sales: 3370000 },
+            { id: 'latam', name: 'Latin America', color: '#ef4444', sales: 1600000 }
+          ],
+          quarterly: [
+            { quarter: 'Q1', na: 1250000, eu: 890000, apac: 720000, latam: 340000 },
+            { quarter: 'Q2', na: 1380000, eu: 920000, apac: 810000, latam: 380000 },
+            { quarter: 'Q3', na: 1420000, eu: 850000, apac: 890000, latam: 420000 },
+            { quarter: 'Q4', na: 1560000, eu: 980000, apac: 950000, latam: 460000 }
+          ],
+          timestamp: new Date().toISOString()
+        }
+      });
+    }
+
+    function simulateRegionDetail() {
+      updateWidget({
+        content: [{ type: 'text', text: 'North America Sales: Total YTD revenue is $5.61M. Best month was Dec ($530K). Q4 vs Q3 growth: 9.9%.' }],
+        structuredContent: {
+          type: 'region_detail',
+          region: { id: 'na', name: 'North America', color: '#10a37f' },
+          monthlyData: [
+            { month: 'Jan', sales: 380000 }, { month: 'Feb', sales: 420000 }, { month: 'Mar', sales: 450000 },
+            { month: 'Apr', sales: 440000 }, { month: 'May', sales: 460000 }, { month: 'Jun', sales: 480000 },
+            { month: 'Jul', sales: 470000 }, { month: 'Aug', sales: 490000 }, { month: 'Sep', sales: 460000 },
+            { month: 'Oct', sales: 510000 }, { month: 'Nov', sales: 520000 }, { month: 'Dec', sales: 530000 }
+          ],
+          totalSales: 5610000,
+          avgMonthlySales: 467500,
+          bestMonth: { month: 'Dec', sales: 530000 },
+          worstMonth: { month: 'Jan', sales: 380000 },
+          qoqGrowth: 9.9,
+          timestamp: new Date().toISOString()
+        }
+      });
+    }
+
+    function simulateTopProducts() {
+      updateWidget({
+        content: [{ type: 'text', text: 'Top 5 Products (by sales): Widget Pro leads with $2.45M in sales (+15.2% growth).' }],
+        structuredContent: {
+          type: 'top_products',
+          products: [
+            { id: 1, name: 'Widget Pro', category: 'Premium', sales: 2450000, units: 12000, growth: 15.2 },
+            { id: 2, name: 'Widget Basic', category: 'Standard', sales: 1820000, units: 28000, growth: 8.5 },
+            { id: 3, name: 'Widget Enterprise', category: 'Premium', sales: 1650000, units: 3200, growth: 22.1 },
+            { id: 4, name: 'Widget Lite', category: 'Budget', sales: 980000, units: 45000, growth: -2.3 },
+            { id: 5, name: 'Widget Cloud', category: 'SaaS', sales: 890000, units: 8500, growth: 45.8 }
+          ],
+          sortBy: 'sales',
+          totalRevenue: 7790000,
+          timestamp: new Date().toISOString()
         }
       });
     }
