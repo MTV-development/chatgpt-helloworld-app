@@ -514,6 +514,147 @@ var styles = `
     transform: translateY(-1px);
     box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
   }
+
+  /* Pomodoro Timer Styles */
+  .pomodoro-container {
+    text-align: center;
+    padding: 16px;
+  }
+
+  .pomodoro-label {
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--text-secondary);
+    margin-bottom: 16px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+
+  .pomodoro-timer {
+    position: relative;
+    width: 200px;
+    height: 200px;
+    margin: 0 auto 20px;
+  }
+
+  .pomodoro-timer svg {
+    transform: rotate(-90deg);
+  }
+
+  .pomodoro-progress-bg {
+    fill: none;
+    stroke: var(--border);
+    stroke-width: 8;
+  }
+
+  .pomodoro-progress-fill {
+    fill: none;
+    stroke: var(--accent);
+    stroke-width: 8;
+    stroke-linecap: round;
+    transition: stroke-dashoffset 0.5s ease;
+  }
+
+  .pomodoro-progress-fill.completed {
+    stroke: #10a37f;
+  }
+
+  .pomodoro-progress-fill.paused {
+    stroke: #f59e0b;
+  }
+
+  .pomodoro-time {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    text-align: center;
+  }
+
+  .pomodoro-time-display {
+    font-size: 36px;
+    font-weight: 700;
+    font-family: 'SF Mono', Monaco, 'Courier New', monospace;
+    color: var(--text-primary);
+  }
+
+  .pomodoro-time-label {
+    font-size: 12px;
+    color: var(--text-secondary);
+    margin-top: 4px;
+  }
+
+  .pomodoro-controls {
+    display: flex;
+    gap: 8px;
+    justify-content: center;
+    margin-bottom: 16px;
+  }
+
+  .pomodoro-btn {
+    padding: 10px 20px;
+    border: none;
+    border-radius: 8px;
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s ease;
+  }
+
+  .pomodoro-btn.primary {
+    background: var(--accent);
+    color: white;
+  }
+
+  .pomodoro-btn.primary:hover {
+    background: var(--accent-hover);
+  }
+
+  .pomodoro-btn.secondary {
+    background: var(--bg-primary);
+    color: var(--text-primary);
+    border: 1px solid var(--border);
+  }
+
+  .pomodoro-btn.secondary:hover {
+    background: var(--border);
+  }
+
+  .pomodoro-btn.warning {
+    background: #f59e0b;
+    color: white;
+  }
+
+  .pomodoro-btn.warning:hover {
+    background: #d97706;
+  }
+
+  .pomodoro-info {
+    font-size: 12px;
+    color: var(--text-secondary);
+  }
+
+  .pomodoro-completed {
+    text-align: center;
+    padding: 20px;
+  }
+
+  .pomodoro-completed-icon {
+    font-size: 48px;
+    margin-bottom: 12px;
+  }
+
+  .pomodoro-completed-message {
+    font-size: 18px;
+    font-weight: 600;
+    color: var(--accent);
+    margin-bottom: 8px;
+  }
+
+  .pomodoro-completed-sub {
+    font-size: 14px;
+    color: var(--text-secondary);
+  }
 `;
 function getContentType(data) {
   if (!data)
@@ -542,6 +683,7 @@ function getIcon(type) {
     dashboard: "\u{1F4CA}",
     region_detail: "\u{1F5FA}\uFE0F",
     top_products: "\u{1F3C6}",
+    pomodoro: "\u{1F345}",
     unknown: "\u{1F680}"
   };
   return icons[type] || icons.unknown;
@@ -555,6 +697,7 @@ function getTitle(type) {
     dashboard: "Sales Dashboard",
     region_detail: "Regional Sales",
     top_products: "Top Products",
+    pomodoro: "Pomodoro Timer",
     unknown: "Hello World"
   };
   return titles[type] || titles.unknown;
@@ -795,6 +938,137 @@ function renderTopProducts(data) {
     </div>
   `;
 }
+var pomodoroState = null;
+var pomodoroIntervalId = null;
+function formatPomodoroTime(ms) {
+  const totalSeconds = Math.max(0, Math.ceil(ms / 1e3));
+  const minutes = Math.floor(totalSeconds / 60);
+  const seconds = totalSeconds % 60;
+  return `${minutes.toString().padStart(2, "0")}:${seconds.toString().padStart(2, "0")}`;
+}
+function savePomodoroState() {
+  if (pomodoroState && window.openai?.setWidgetState) {
+    window.openai.setWidgetState(pomodoroState);
+  }
+}
+function getPomodoroRemaining() {
+  if (!pomodoroState)
+    return 0;
+  if (pomodoroState.completed)
+    return 0;
+  if (pomodoroState.isPaused)
+    return pomodoroState.pausedRemaining;
+  return Math.max(0, pomodoroState.endTime - Date.now());
+}
+function renderPomodoroRing(remaining, total, isPaused, completed) {
+  const progress = total > 0 ? remaining / total : 0;
+  const circumference = 2 * Math.PI * 45;
+  const offset = circumference * (1 - progress);
+  let fillClass = "pomodoro-progress-fill";
+  if (completed)
+    fillClass += " completed";
+  else if (isPaused)
+    fillClass += " paused";
+  return `
+    <svg width="200" height="200" viewBox="0 0 100 100">
+      <circle cx="50" cy="50" r="45" class="pomodoro-progress-bg"/>
+      <circle cx="50" cy="50" r="45" class="${fillClass}"
+              stroke-dasharray="${circumference}"
+              stroke-dashoffset="${offset}"/>
+    </svg>
+  `;
+}
+function renderPomodoro(data) {
+  const savedState = window.openai?.widgetState;
+  if (!pomodoroState) {
+    if (savedState && savedState.endTime && !savedState.completed) {
+      pomodoroState = savedState;
+    } else {
+      pomodoroState = {
+        endTime: data.endTime,
+        durationMs: data.durationMs,
+        isPaused: false,
+        pausedRemaining: 0,
+        label: data.label || "Focus Session",
+        completed: false,
+        startedAt: data.startedAt || (/* @__PURE__ */ new Date()).toISOString()
+      };
+    }
+  }
+  if (!pomodoroIntervalId && !pomodoroState.completed) {
+    startPomodoroInterval();
+  }
+  const remaining = getPomodoroRemaining();
+  const total = pomodoroState.durationMs;
+  const timeDisplay = formatPomodoroTime(remaining);
+  const startTime = new Date(pomodoroState.startedAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+  if (pomodoroState.completed) {
+    return `
+      <div class="pomodoro-completed">
+        <div class="pomodoro-completed-icon">\u{1F389}</div>
+        <div class="pomodoro-completed-message">Time's Up!</div>
+        <div class="pomodoro-completed-sub">${pomodoroState.label} complete</div>
+      </div>
+      <div class="pomodoro-controls">
+        <button class="pomodoro-btn primary" onclick="resetPomodoro()">Start New Timer</button>
+      </div>
+      <div class="pomodoro-info">
+        Started at ${startTime}
+      </div>
+    `;
+  }
+  const pauseResumeBtn = pomodoroState.isPaused ? `<button class="pomodoro-btn primary" onclick="resumePomodoro()">Resume</button>` : `<button class="pomodoro-btn warning" onclick="pausePomodoro()">Pause</button>`;
+  return `
+    <div class="pomodoro-container">
+      <div class="pomodoro-label">${escapeHtml(pomodoroState.label)}</div>
+      <div class="pomodoro-timer">
+        ${renderPomodoroRing(remaining, total, pomodoroState.isPaused, pomodoroState.completed)}
+        <div class="pomodoro-time">
+          <div class="pomodoro-time-display">${timeDisplay}</div>
+          <div class="pomodoro-time-label">${pomodoroState.isPaused ? "paused" : "remaining"}</div>
+        </div>
+      </div>
+      <div class="pomodoro-controls">
+        ${pauseResumeBtn}
+        <button class="pomodoro-btn secondary" onclick="addPomodoroTime(5)">+5 min</button>
+        <button class="pomodoro-btn secondary" onclick="resetPomodoro()">Reset</button>
+      </div>
+      <div class="pomodoro-info">
+        Started at ${startTime}
+      </div>
+    </div>
+  `;
+}
+function startPomodoroInterval() {
+  if (pomodoroIntervalId)
+    return;
+  pomodoroIntervalId = window.setInterval(() => {
+    if (!pomodoroState || pomodoroState.isPaused || pomodoroState.completed)
+      return;
+    const remaining = pomodoroState.endTime - Date.now();
+    if (remaining <= 0) {
+      pomodoroState.completed = true;
+      savePomodoroState();
+      stopPomodoroInterval();
+      if (window.openai?.sendFollowUpMessage) {
+        window.openai.sendFollowUpMessage({
+          prompt: `My ${pomodoroState.label} timer just finished! What should I do for my break?`
+        });
+      } else if (window.openai?.sendFollowUp) {
+        window.openai.sendFollowUp(`My ${pomodoroState.label} timer just finished!`);
+      }
+      render();
+    } else {
+      render();
+    }
+  }, 1e3);
+}
+function stopPomodoroInterval() {
+  if (pomodoroIntervalId) {
+    clearInterval(pomodoroIntervalId);
+    pomodoroIntervalId = null;
+  }
+}
 window.sayHello = async () => {
   if (window.openai?.callTool) {
     await window.openai.callTool("say_hello", { name: "Friend" });
@@ -861,13 +1135,55 @@ window.askAI = async (question) => {
     window.openai.sendFollowUpMessage({ prompt: question });
   }
 };
+window.pausePomodoro = () => {
+  if (pomodoroState && !pomodoroState.isPaused && !pomodoroState.completed) {
+    pomodoroState.isPaused = true;
+    pomodoroState.pausedRemaining = pomodoroState.endTime - Date.now();
+    savePomodoroState();
+    render();
+  }
+};
+window.resumePomodoro = () => {
+  if (pomodoroState && pomodoroState.isPaused && !pomodoroState.completed) {
+    pomodoroState.isPaused = false;
+    pomodoroState.endTime = Date.now() + pomodoroState.pausedRemaining;
+    pomodoroState.pausedRemaining = 0;
+    savePomodoroState();
+    startPomodoroInterval();
+    render();
+  }
+};
+window.resetPomodoro = () => {
+  stopPomodoroInterval();
+  pomodoroState = null;
+  if (window.openai?.sendFollowUpMessage) {
+    window.openai.sendFollowUpMessage({
+      prompt: "I'd like to start a new pomodoro timer. How long should this session be?"
+    });
+  } else if (window.openai?.sendFollowUp) {
+    window.openai.sendFollowUp("Start a new pomodoro timer");
+  }
+};
+window.addPomodoroTime = (minutes) => {
+  if (pomodoroState && !pomodoroState.completed) {
+    const addMs = minutes * 60 * 1e3;
+    pomodoroState.durationMs += addMs;
+    if (pomodoroState.isPaused) {
+      pomodoroState.pausedRemaining += addMs;
+    } else {
+      pomodoroState.endTime += addMs;
+    }
+    savePomodoroState();
+    render();
+  }
+};
 function render() {
   const root = document.getElementById("root");
   if (!root)
     return;
   const openai = window.openai;
   const theme = openai?.theme || "light";
-  const structuredContent = openai?.toolOutput?.structuredContent;
+  const structuredContent = openai?.toolOutput;
   const contentType = getContentType(structuredContent);
   document.documentElement.setAttribute("data-theme", theme);
   const isDashboard = ["dashboard", "region_detail", "top_products"].includes(contentType);
@@ -894,6 +1210,9 @@ function render() {
         break;
       case "top_products":
         contentHtml = renderTopProducts(structuredContent);
+        break;
+      case "pomodoro":
+        contentHtml = renderPomodoro(structuredContent);
         break;
       default:
         contentHtml = renderNoData();

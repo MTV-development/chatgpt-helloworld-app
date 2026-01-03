@@ -10,9 +10,25 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 // Configuration
 const PORT = process.env.PORT || 8000;
-// WIDGET_BASE_URL: If not set, widgets are served from same origin (recommended for single ngrok tunnel)
-// Set this to a separate URL only if you want to serve widgets from a different server
-const WIDGET_BASE_URL = process.env.WIDGET_BASE_URL || "";
+const DEBUG = process.env.DEBUG !== "false"; // Enable debug logging by default
+
+// Version identifier - update this when making changes to verify fresh deployment
+const BUILD_VERSION = "2026.01.03-B";
+const BUILD_TIMESTAMP = new Date().toISOString();
+
+// Widget resource URI - this is the MCP resource identifier
+// Version suffix helps bust ChatGPT's cache when widget content changes
+const WIDGET_RESOURCE_URI = `ui://widget/app-${BUILD_VERSION}.html`;
+
+// Debug logging helper
+function debugLog(label: string, data?: unknown): void {
+  if (!DEBUG) return;
+  const timestamp = new Date().toISOString().split("T")[1].slice(0, 12);
+  console.log(`\n[${timestamp}] 🔍 ${label}`);
+  if (data !== undefined) {
+    console.log(JSON.stringify(data, null, 2));
+  }
+}
 
 // Create Express app
 const app = express();
@@ -43,17 +59,23 @@ function createMcpServer(): McpServer {
     version: "1.0.0",
   });
 
-  // Register the widget as a resource
-  server.resource(
-    "widget-bundle",
-    "widget://helloworld/app.html",
+  // Register the widget as a resource with text/html+skybridge MIME type
+  // This tells ChatGPT to treat it as a widget template
+  server.registerResource(
+    "app-widget",
+    WIDGET_RESOURCE_URI,
+    {},
     async () => {
-      // Read the widget HTML or return a URL reference
+      debugLog("RESOURCE FETCHED", {
+        uri: WIDGET_RESOURCE_URI,
+        mimeType: "text/html+skybridge",
+        htmlLength: getWidgetHtml().length,
+      });
       return {
         contents: [
           {
-            uri: "widget://helloworld/app.html",
-            mimeType: "text/html",
+            uri: WIDGET_RESOURCE_URI,
+            mimeType: "text/html+skybridge",
             text: getWidgetHtml(),
           },
         ],
@@ -61,18 +83,67 @@ function createMcpServer(): McpServer {
     }
   );
 
-  // Tool 1: Say Hello - A simple greeting tool
-  server.tool(
-    "say_hello",
-    "Use this when the user wants to see a greeting or test the Hello World app. Returns a personalized greeting message.",
+  // Helper function to create tool metadata (matches official examples pattern)
+  function toolMeta() {
+    return {
+      "openai/outputTemplate": WIDGET_RESOURCE_URI,
+    };
+  }
+
+  // Helper to log and return tool response
+  function logToolResponse<T extends {
+    content: Array<{ type: "text"; text: string }>;
+    structuredContent: Record<string, unknown>;
+    _meta: Record<string, string>;
+  }>(toolName: string, input: unknown, response: T): T {
+    debugLog(`TOOL CALLED: ${toolName}`, { input });
+    debugLog(`TOOL RESPONSE: ${toolName}`, {
+      contentText: response.content[0]?.text?.slice(0, 100) + "...",
+      structuredContent: response.structuredContent,
+      _meta: response._meta,
+    });
+    return response;
+  }
+
+  // Tool 0: Get Version - Returns current build version
+  server.registerTool(
+    "get_version",
     {
-      name: z.string().optional().describe("The name to greet. If not provided, uses 'World'"),
+      description: "Returns the current version of the Hello World app. Use this to verify the MCP server is up to date.",
+      inputSchema: {},
+    },
+    async () => {
+      debugLog("TOOL CALLED: get_version");
+      return {
+        content: [
+          {
+            type: "text" as const,
+            text: `Hello World App Version: ${BUILD_VERSION}\nServer started: ${BUILD_TIMESTAMP}\nWidget URI: ${WIDGET_RESOURCE_URI}`,
+          },
+        ],
+      };
+    }
+  );
+
+  // Tool 1: Say Hello - A simple greeting tool
+  server.registerTool(
+    "say_hello",
+    {
+      description: "Use this when the user wants to see a greeting or test the Hello World app. Returns a personalized greeting message.",
+      inputSchema: {
+        name: z.string().optional().describe("The name to greet. If not provided, uses 'World'"),
+      },
+      _meta: {
+        "openai/outputTemplate": WIDGET_RESOURCE_URI,
+        "openai/toolInvocation/invoking": "Preparing greeting...",
+        "openai/toolInvocation/invoked": "Greeting ready!",
+      },
     },
     async ({ name }) => {
       const greeting = name || "World";
       const timestamp = new Date().toISOString();
 
-      return {
+      return logToolResponse("say_hello", { name }, {
         content: [
           {
             type: "text",
@@ -85,18 +156,23 @@ function createMcpServer(): McpServer {
           timestamp,
           message: `Hello, ${greeting}!`,
         },
-        _meta: {
-          "openai/outputTemplate": `${WIDGET_BASE_URL}/widget/app.html`,
-        },
-      };
+        _meta: toolMeta(),
+      });
     }
   );
 
   // Tool 2: Get Random Fact - Returns a fun fact
-  server.tool(
+  server.registerTool(
     "get_random_fact",
-    "Use this when the user wants to see a random fun fact or interesting information.",
-    {},
+    {
+      description: "Use this when the user wants to see a random fun fact or interesting information.",
+      inputSchema: {},
+      _meta: {
+        "openai/outputTemplate": WIDGET_RESOURCE_URI,
+        "openai/toolInvocation/invoking": "Finding an interesting fact...",
+        "openai/toolInvocation/invoked": "Here's your fact!",
+      },
+    },
     async () => {
       const facts = [
         "Honey never spoils. Archaeologists have found 3000-year-old honey in Egyptian tombs that was still edible!",
@@ -124,21 +200,26 @@ function createMcpServer(): McpServer {
           fact: randomFact,
           timestamp,
         },
-        _meta: {
-          "openai/outputTemplate": `${WIDGET_BASE_URL}/widget/app.html`,
-        },
+        _meta: toolMeta(),
       };
     }
   );
 
   // Tool 3: Calculate - Simple calculator
-  server.tool(
+  server.registerTool(
     "calculate",
-    "Use this when the user wants to perform a simple calculation (add, subtract, multiply, divide).",
     {
-      operation: z.enum(["add", "subtract", "multiply", "divide"]).describe("The mathematical operation to perform"),
-      a: z.number().describe("The first number"),
-      b: z.number().describe("The second number"),
+      description: "Use this when the user wants to perform a simple calculation (add, subtract, multiply, divide).",
+      inputSchema: {
+        operation: z.enum(["add", "subtract", "multiply", "divide"]).describe("The mathematical operation to perform"),
+        a: z.number().describe("The first number"),
+        b: z.number().describe("The second number"),
+      },
+      _meta: {
+        "openai/outputTemplate": WIDGET_RESOURCE_URI,
+        "openai/toolInvocation/invoking": "Calculating...",
+        "openai/toolInvocation/invoked": "Calculation complete!",
+      },
     },
     async ({ operation, a, b }) => {
       let result: number;
@@ -184,19 +265,24 @@ function createMcpServer(): McpServer {
           result,
           expression: `${a} ${symbol} ${b} = ${result}`,
         },
-        _meta: {
-          "openai/outputTemplate": `${WIDGET_BASE_URL}/widget/app.html`,
-        },
+        _meta: toolMeta(),
       };
     }
   );
 
   // Tool 4: Get Current Time
-  server.tool(
+  server.registerTool(
     "get_time",
-    "Use this when the user wants to know the current time or date.",
     {
-      timezone: z.string().optional().describe("Timezone (e.g., 'America/New_York', 'Europe/London'). Defaults to UTC."),
+      description: "Use this when the user wants to know the current time or date.",
+      inputSchema: {
+        timezone: z.string().optional().describe("Timezone (e.g., 'America/New_York', 'Europe/London'). Defaults to UTC."),
+      },
+      _meta: {
+        "openai/outputTemplate": WIDGET_RESOURCE_URI,
+        "openai/toolInvocation/invoking": "Fetching current time...",
+        "openai/toolInvocation/invoked": "Time retrieved!",
+      },
     },
     async ({ timezone }) => {
       const tz = timezone || "UTC";
@@ -241,9 +327,7 @@ function createMcpServer(): McpServer {
           formatted: timeString,
           iso: new Date().toISOString(),
         },
-        _meta: {
-          "openai/outputTemplate": `${WIDGET_BASE_URL}/widget/app.html`,
-        },
+        _meta: toolMeta(),
       };
     }
   );
@@ -302,11 +386,18 @@ function createMcpServer(): McpServer {
   };
 
   // Tool 5: Get Sales Dashboard - Main dashboard view
-  server.tool(
+  server.registerTool(
     "get_sales_dashboard",
-    "Display an interactive sales dashboard with charts showing sales by region. Use this when the user asks about sales, revenue, performance, or wants to see a dashboard.",
     {
-      period: z.enum(["q1", "q2", "q3", "q4", "ytd"]).optional().describe("Time period to show. Defaults to YTD (year to date)."),
+      description: "Display an interactive sales dashboard with charts showing sales by region. Use this when the user asks about sales, revenue, performance, or wants to see a dashboard.",
+      inputSchema: {
+        period: z.enum(["q1", "q2", "q3", "q4", "ytd"]).optional().describe("Time period to show. Defaults to YTD (year to date)."),
+      },
+      _meta: {
+        "openai/outputTemplate": WIDGET_RESOURCE_URI,
+        "openai/toolInvocation/invoking": "Loading sales dashboard...",
+        "openai/toolInvocation/invoked": "Dashboard ready!",
+      },
     },
     async ({ period }) => {
       const selectedPeriod = period || "ytd";
@@ -346,19 +437,24 @@ function createMcpServer(): McpServer {
           quarterly: salesData.quarterly,
           timestamp: new Date().toISOString(),
         },
-        _meta: {
-          "openai/outputTemplate": `${WIDGET_BASE_URL}/widget/app.html`,
-        },
+        _meta: toolMeta(),
       };
     }
   );
 
   // Tool 6: Get Sales By Region - Drill down into a specific region
-  server.tool(
+  server.registerTool(
     "get_sales_by_region",
-    "Get detailed sales breakdown for a specific region. Use this when the user asks about a specific region's performance (e.g., 'How is Europe doing?', 'Show me Asia sales').",
     {
-      region: z.enum(["na", "eu", "apac", "latam"]).describe("Region ID: na (North America), eu (Europe), apac (Asia Pacific), latam (Latin America)"),
+      description: "Get detailed sales breakdown for a specific region. Use this when the user asks about a specific region's performance (e.g., 'How is Europe doing?', 'Show me Asia sales').",
+      inputSchema: {
+        region: z.enum(["na", "eu", "apac", "latam"]).describe("Region ID: na (North America), eu (Europe), apac (Asia Pacific), latam (Latin America)"),
+      },
+      _meta: {
+        "openai/outputTemplate": WIDGET_RESOURCE_URI,
+        "openai/toolInvocation/invoking": "Loading regional data...",
+        "openai/toolInvocation/invoked": "Regional breakdown ready!",
+      },
     },
     async ({ region }) => {
       const regionInfo = salesData.regions.find(r => r.id === region)!;
@@ -391,20 +487,25 @@ function createMcpServer(): McpServer {
           qoqGrowth: parseFloat(qoqGrowth),
           timestamp: new Date().toISOString(),
         },
-        _meta: {
-          "openai/outputTemplate": `${WIDGET_BASE_URL}/widget/app.html`,
-        },
+        _meta: toolMeta(),
       };
     }
   );
 
   // Tool 7: Get Top Products - Show best selling products
-  server.tool(
+  server.registerTool(
     "get_top_products",
-    "Show top selling products with sales figures and growth rates. Use this when the user asks about products, best sellers, or product performance.",
     {
-      limit: z.number().min(1).max(10).optional().describe("Number of products to show (1-10). Defaults to 5."),
-      sortBy: z.enum(["sales", "units", "growth"]).optional().describe("Sort by: sales (revenue), units (quantity sold), or growth (percentage). Defaults to sales."),
+      description: "Show top selling products with sales figures and growth rates. Use this when the user asks about products, best sellers, or product performance.",
+      inputSchema: {
+        limit: z.number().min(1).max(10).optional().describe("Number of products to show (1-10). Defaults to 5."),
+        sortBy: z.enum(["sales", "units", "growth"]).optional().describe("Sort by: sales (revenue), units (quantity sold), or growth (percentage). Defaults to sales."),
+      },
+      _meta: {
+        "openai/outputTemplate": WIDGET_RESOURCE_URI,
+        "openai/toolInvocation/invoking": "Loading product data...",
+        "openai/toolInvocation/invoked": "Top products ready!",
+      },
     },
     async ({ limit, sortBy }) => {
       const count = limit || 5;
@@ -432,35 +533,81 @@ function createMcpServer(): McpServer {
           totalRevenue,
           timestamp: new Date().toISOString(),
         },
-        _meta: {
-          "openai/outputTemplate": `${WIDGET_BASE_URL}/widget/app.html`,
-        },
+        _meta: toolMeta(),
       };
+    }
+  );
+
+  // ============================================================
+  // POMODORO TIMER TOOL - Visual countdown timer widget
+  // ============================================================
+
+  // Tool 8: Start Pomodoro Timer
+  server.registerTool(
+    "start_pomodoro",
+    {
+      description: "Start a visual Pomodoro focus timer. Returns a countdown widget. Use this when the user wants to start a focus session, pomodoro timer, or countdown timer.",
+      inputSchema: {
+        minutes: z.number().min(1).max(120).describe("Duration in minutes (1-120). Default pomodoro is 25 minutes."),
+        label: z.string().optional().describe("Optional label for this session (e.g., 'Deep work', 'Study', 'Reading')"),
+      },
+      _meta: {
+        "openai/outputTemplate": WIDGET_RESOURCE_URI,
+        "openai/toolInvocation/invoking": "Starting timer...",
+        "openai/toolInvocation/invoked": "Timer started!",
+      },
+    },
+    async ({ minutes, label }) => {
+      const durationMs = minutes * 60 * 1000;
+      const endTime = Date.now() + durationMs;
+      const sessionLabel = label || "Focus Session";
+
+      return logToolResponse("start_pomodoro", { minutes, label }, {
+        content: [
+          {
+            type: "text",
+            text: `Pomodoro timer started: ${minutes} minute${minutes !== 1 ? 's' : ''}${label ? ` (${label})` : ''}. Focus time! The timer widget will count down and notify you when complete.`,
+          },
+        ],
+        structuredContent: {
+          type: "pomodoro",
+          minutes: minutes,
+          durationMs: durationMs,
+          endTime: endTime,
+          label: sessionLabel,
+          startedAt: new Date().toISOString(),
+        },
+        _meta: toolMeta(),
+      });
     }
   );
 
   return server;
 }
 
-// Get widget HTML content
+// Get widget HTML content - reads the self-contained widget file
 function getWidgetHtml(): string {
-  // For development, we'll return a reference to the served widget
-  return `<!DOCTYPE html>
+  // Read the complete widget HTML file (must be self-contained for text/html+skybridge)
+  const widgetPath = path.join(__dirname, "..", "widget", "app.html");
+  try {
+    return fs.readFileSync(widgetPath, "utf-8");
+  } catch (error) {
+    console.error("Failed to read widget HTML:", error);
+    // Return a minimal fallback widget
+    return `<!DOCTYPE html>
 <html>
 <head>
   <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Hello World Widget</title>
-  <script type="module" src="${WIDGET_BASE_URL}/widget/app.js"></script>
   <style>
-    * { box-sizing: border-box; margin: 0; padding: 0; }
-    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; }
+    body { font-family: system-ui, sans-serif; padding: 20px; }
+    .error { color: #ef4444; }
   </style>
 </head>
 <body>
-  <div id="root"></div>
+  <div class="error">Widget failed to load. Please check server logs.</div>
 </body>
 </html>`;
+  }
 }
 
 // SSE endpoint for MCP - establishes the SSE connection
@@ -513,7 +660,7 @@ app.get("/health", (req, res) => {
     status: "ok",
     server: "HelloWorld ChatGPT App",
     version: "1.0.0",
-    widgetUrl: WIDGET_BASE_URL,
+    widgetResourceUri: WIDGET_RESOURCE_URI,
   });
 });
 
@@ -521,12 +668,15 @@ app.get("/health", (req, res) => {
 app.get("/", (req, res) => {
   res.json({
     name: "HelloWorld ChatGPT App",
+    version: BUILD_VERSION,
+    serverStarted: BUILD_TIMESTAMP,
     description: "A simple test app for the ChatGPT Apps SDK with interactive sales dashboard",
     endpoints: {
       mcp: "/mcp",
       health: "/health",
     },
     tools: [
+      { name: "get_version", description: "Check current app version" },
       { name: "say_hello", description: "Get a personalized greeting" },
       { name: "get_random_fact", description: "Get a random fun fact" },
       { name: "calculate", description: "Perform simple calculations" },
@@ -534,22 +684,24 @@ app.get("/", (req, res) => {
       { name: "get_sales_dashboard", description: "Interactive sales dashboard with charts" },
       { name: "get_sales_by_region", description: "Detailed regional sales breakdown" },
       { name: "get_top_products", description: "Top selling products" },
+      { name: "start_pomodoro", description: "Visual Pomodoro focus timer" },
     ],
   });
 });
 
 // Start server
 app.listen(PORT, () => {
-  const widgetUrl = WIDGET_BASE_URL || `http://localhost:${PORT}`;
   console.log(`
 ╔═══════════════════════════════════════════════════════════════╗
 ║           HelloWorld ChatGPT App - MCP Server                 ║
+║                    Version: ${BUILD_VERSION.padEnd(20)}              ║
 ╠═══════════════════════════════════════════════════════════════╣
 ║  Server running at: http://localhost:${PORT}                     ║
 ║  MCP endpoint:      http://localhost:${PORT}/mcp                 ║
 ║  Widget served at:  http://localhost:${PORT}/widget              ║
 ╠═══════════════════════════════════════════════════════════════╣
 ║  Available Tools:                                             ║
+║    • get_version      - Check current app version             ║
 ║    • say_hello        - Get a personalized greeting           ║
 ║    • get_random_fact  - Get a random fun fact                 ║
 ║    • calculate        - Perform simple calculations           ║
@@ -558,6 +710,8 @@ app.listen(PORT, () => {
 ║    • get_sales_dashboard - Interactive sales charts           ║
 ║    • get_sales_by_region - Regional drill-down                ║
 ║    • get_top_products    - Product performance                ║
+║  Productivity Tools:                                          ║
+║    • start_pomodoro      - Visual countdown timer (PiP)       ║
 ╠═══════════════════════════════════════════════════════════════╣
 ║  Next Steps (only ONE ngrok tunnel needed!):                  ║
 ║    1. Run: ngrok http ${PORT}                                    ║

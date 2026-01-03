@@ -1,22 +1,20 @@
 interface OpenAIWidgetAPI {
     toolInput?: Record<string, unknown>;
-    toolOutput?: {
-        content?: Array<{
-            type: string;
-            text?: string;
-        }>;
-        structuredContent?: Record<string, unknown>;
-    };
+    toolOutput?: Record<string, unknown>;
     theme?: "light" | "dark";
     locale?: string;
     displayMode?: string;
+    maxHeight?: number;
     callTool: (name: string, args: Record<string, unknown>) => Promise<unknown>;
     setWidgetState: (state: Record<string, unknown>) => void;
-    getWidgetState: () => Record<string, unknown>;
+    widgetState?: Record<string, unknown>;
     sendFollowUp: (message: string) => void;
     sendFollowUpMessage?: (opts: {
         prompt: string;
     }) => void;
+    requestDisplayMode?: (opts: {
+        mode: string;
+    }) => Promise<void>;
     requestFullscreen: () => void;
     exitFullscreen: () => void;
 }

@@ -138,6 +138,12 @@
         <button class="dashboard" onclick="simulateRegionDetail()">Region Detail (NA)</button>
         <button class="dashboard" onclick="simulateTopProducts()">Top Products</button>
       </div>
+      <div class="button-group-label">Productivity Tools</div>
+      <div class="button-group">
+        <button class="primary" onclick="simulatePomodoro(1)">Pomodoro (1 min test)</button>
+        <button class="primary" onclick="simulatePomodoro(25)">Pomodoro (25 min)</button>
+        <button class="secondary" onclick="simulatePomodoroCompleted()">Completed Timer</button>
+      </div>
       <div class="theme-toggle">
         <span>Theme:</span>
         <button class="secondary" onclick="setTheme('light')">Light</button>
@@ -334,6 +340,42 @@
           sortBy: 'sales',
           totalRevenue: 7790000,
           timestamp: new Date().toISOString()
+        }
+      });
+    }
+
+    // Pomodoro simulations
+    function simulatePomodoro(minutes) {
+      const durationMs = minutes * 60 * 1000;
+      const endTime = Date.now() + durationMs;
+
+      updateWidget({
+        content: [{ type: 'text', text: `Pomodoro timer started: ${minutes} minutes. Focus time!` }],
+        structuredContent: {
+          type: 'pomodoro',
+          minutes: minutes,
+          durationMs: durationMs,
+          endTime: endTime,
+          label: 'Focus Session',
+          startedAt: new Date().toISOString()
+        }
+      });
+    }
+
+    function simulatePomodoroCompleted() {
+      // Simulate a completed timer (endTime in the past)
+      const durationMs = 25 * 60 * 1000;
+      const endTime = Date.now() - 1000; // Already expired
+
+      updateWidget({
+        content: [{ type: 'text', text: 'Pomodoro timer completed!' }],
+        structuredContent: {
+          type: 'pomodoro',
+          minutes: 25,
+          durationMs: durationMs,
+          endTime: endTime,
+          label: 'Deep Work',
+          startedAt: new Date(Date.now() - durationMs).toISOString()
         }
       });
     }
